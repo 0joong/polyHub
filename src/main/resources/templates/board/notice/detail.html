@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!-- [수정] sec 네임스페이스 추가 -->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="kr">
+<head>
+  <meta charset="UTF-8">
+  <title>공지사항 상세보기</title>
+  <link rel="stylesheet" th:href="@{/css/lux.min.css}">
+</head>
+<body>
+<div th:replace="layout/header :: header"></div>
+
+<div class="container mt-5">
+  <h2 class="mb-4" th:text="${notice.title}">공지사항 제목</h2>
+
+  <div class="mb-2">
+    <strong>작성자:</strong> <span th:text="${notice.writer}">관리자</span> |
+    <strong>작성일:</strong> <span th:text="${#temporals.format(notice.createdAt, 'yyyy-MM-dd HH:mm')}">2025-06-09 12:00</span> |
+    <strong>조회수:</strong> <span th:text="${notice.view_cnt}">0</span>
+    <span th:if="${notice.isPinned}" class="badge bg-danger ms-2">공지</span>
+  </div>
+
+  <hr>
+
+  <div th:utext="${notice.content}">
+    공지사항 본문 내용입니다.
+  </div>
+
+  <div class="mt-4">
+    <!-- [수정] sec:authorize를 사용하여 ADMIN 권한이 있을 때만 이 div 블록이 렌더링되도록 함 -->
+    <div class="d-inline" sec:authorize="hasRole('ADMIN')">
+      <a th:href="@{'/notice/edit/' + ${notice.id}}" class="btn btn-warning">수정</a>
+      <form th:action="@{'/notice/delete/' + ${notice.id}}" method="post" class="d-inline" onsubmit="return confirm('정말로 삭제하시겠습니까?');">
+        <button type="submit" class="btn btn-danger">삭제</button>
+      </form>
+    </div>
+    <a th:href="@{/notice}" class="btn btn-secondary">목록</a>
+  </div>
+</div>
+<div th:replace="layout/footer :: footer"></div>
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

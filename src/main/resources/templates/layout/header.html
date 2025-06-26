@@ -1,0 +1,265 @@
+<div th:fragment="header" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+     xmlns:th="http://www.thymeleaf.org">
+
+    <!-- 로그인한 사용자에게만 렌더링되는 스크립트 (FCM, SSE 통합 및 수정) -->
+    <div sec:authorize="isAuthenticated()">
+        <script type="module">
+            // 1. Firebase SDK에서 필요한 함수들을 import 합니다.
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+            import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging.js";
+
+            // 2. Firebase 프로젝트 설정
+            const firebaseConfig = {
+                apiKey: "AIzaSyC4PP73Rr5s01kU3TM6_7PGG8Z6_B7Y-hI",
+                authDomain: "polyhub-b0f5a.firebaseapp.com",
+                projectId: "polyhub-b0f5a",
+                storageBucket: "polyhub-b0f5a.firebasestorage.app",
+                messagingSenderId: "78068345438",
+                appId: "1:78068345438:web:cdf00e932f7e6ce42de2cf",
+                measurementId: "G-J8DRZEYRWH"
+            };
+
+            // 3. Firebase 앱 초기화 및 전역 변수 설정
+            const app = initializeApp(firebaseConfig);
+            const messaging = getMessaging(app);
+            const notificationBadge = document.getElementById('notification-badge');
+            const notificationList = document.getElementById('notification-list');
+
+            // --- 함수 정의 영역 ---
+
+            // 토큰 발급 및 서버 전송
+            function getTokenAndSendToServer() {
+                const vapidKey = 'BH4BMCg3rQGTS2SQnhOp-SXGwvkeqIfISLIyG8tvTJ_90NN2Fqq1ID3lO5wtIMCebrkdce_os-HK-lgoUzCh4Ac';
+                getToken(messaging, { vapidKey: vapidKey })
+                    .then((currentToken) => {
+                        if (currentToken) {
+                            console.log('FCM 토큰:', currentToken);
+                            sendTokenToServer(currentToken);
+                        } else {
+                            console.log('FCM 토큰을 발급받지 못했습니다. 초기 알림 로드만 진행합니다.');
+                        }
+                        fetchInitialNotifications();
+                    }).catch((err) => {
+                    console.error('FCM 토큰 발급 중 오류 발생:', err);
+                    fetchInitialNotifications();
+                });
+            }
+
+            // 토큰을 백엔드 서버로 전송
+            function sendTokenToServer(token) {
+                const csrfToken = /*[[${_csrf} ? ${_csrf.token} : null]]*/ null;
+                const csrfHeader = /*[[${_csrf} ? ${_csrf.headerName} : null]]*/ null;
+                const headers = { 'Content-Type': 'application/json' };
+                if (csrfToken) {
+                    headers[csrfHeader] = csrfToken;
+                }
+
+                fetch('/api/fcm/token', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ token: token })
+                }).then(response => {
+                    if (response.ok) console.log('FCM 토큰이 서버에 성공적으로 등록되었습니다.');
+                    else console.error('FCM 토큰 서버 등록 실패.');
+                }).catch(error => console.error('토큰 전송 중 네트워크 오류:', error));
+            }
+
+            // 페이지 로드 시 기존 알림을 가져오고, 성공하면 SSE 연결
+            function fetchInitialNotifications() {
+                fetch('/api/notifications')
+                    .then(response => {
+                        if (!response.ok) throw new Error('알림 목록을 가져오는데 실패했습니다.');
+                        return response.json();
+                    })
+                    .then(notifications => {
+                        notificationList.innerHTML = '';
+                        notificationBadge.textContent = '0';
+                        notificationBadge.style.display = 'none';
+
+                        if (notifications && notifications.length > 0) {
+                            notifications.forEach(updateNotificationUI);
+                        } else {
+                            const noNotificationItem = document.createElement('li');
+                            noNotificationItem.innerHTML = `<a class="dropdown-item text-muted text-center" href="#">알림이 없습니다.</a>`;
+                            notificationList.appendChild(noNotificationItem);
+                        }
+                        connectSse();
+                    })
+                    .catch(error => {
+                        console.error("초기 알림 로딩 실패:", error);
+                        connectSse();
+                    });
+            }
+
+            // 실시간 SSE 연결
+            function connectSse() {
+                const eventSource = new EventSource("/api/notifications/subscribe");
+                eventSource.onopen = () => console.log("SSE: 연결 성공.");
+                eventSource.addEventListener('notification', (event) => {
+                    const notificationData = JSON.parse(event.data);
+                    updateNotificationUI(notificationData);
+                });
+                eventSource.onerror = () => console.error("SSE: 연결 오류 발생. 브라우저가 자동으로 재연결을 시도합니다.");
+            }
+
+            function updateNotificationUI(notificationData) {
+                const currentCount = parseInt(notificationBadge.textContent) || 0;
+                notificationBadge.textContent = currentCount + 1;
+                notificationBadge.style.display = 'block';
+
+                const noNotificationItem = notificationList.querySelector('.no-notifications');
+                if (noNotificationItem) {
+                    noNotificationItem.parentElement.remove();
+                }
+
+                // [수정] li 요소에 data-id 속성 추가 및 삭제 버튼 포함
+                const newLi = document.createElement('li');
+                newLi.setAttribute('data-notification-id', notificationData.id);
+                // [수정] 줄바꿈을 위한 인라인 스타일 추가
+                newLi.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center p-2">
+                        <a class="dropdown-item flex-grow-1" href="${notificationData.link || '#'}">
+                            <div class="small text-wrap" style="white-space: normal; word-wrap: break-word;">${notificationData.message || '내용 없음'}</div>
+                        </a>
+                        <button type="button" class="btn-close btn-sm ms-2 flex-shrink-0 delete-notification-btn" aria-label="삭제"></button>
+                    </div>
+                `;
+                notificationList.prepend(newLi);
+            }
+
+            // [추가] '알림 없음' 메시지를 표시하는 함수
+            function showNoNotificationMessage() {
+                const noNotificationItem = document.createElement('li');
+                noNotificationItem.innerHTML = `<a class="dropdown-item text-muted text-center no-notifications" href="#">알림이 없습니다.</a>`;
+                notificationList.appendChild(noNotificationItem);
+            }
+
+            // [추가] 알림 삭제 요청을 보내는 함수
+            function deleteNotification(notificationId) {
+                const csrfToken = /*[[${_csrf} ? ${_csrf.token} : null]]*/ null;
+                const csrfHeader = /*[[${_csrf} ? ${_csrf.headerName} : null]]*/ null;
+                const headers = {};
+                if (csrfToken) { headers[csrfHeader] = csrfToken; }
+
+                fetch(`/api/notifications/${notificationId}`, {
+                    method: 'DELETE',
+                    headers: headers
+                }).then(response => {
+                    if (response.ok) {
+                        console.log(`알림 ${notificationId} 삭제 성공`);
+                        // UI에서 해당 알림 제거
+                        const itemToRemove = notificationList.querySelector(`li[data-notification-id='${notificationId}']`);
+                        if (itemToRemove) {
+                            itemToRemove.remove();
+                            // 뱃지 숫자 감소
+                            const currentCount = parseInt(notificationBadge.textContent);
+                            if(currentCount > 1) {
+                                notificationBadge.textContent = currentCount - 1;
+                            } else {
+                                notificationBadge.textContent = '0';
+                                notificationBadge.style.display = 'none';
+                                showNoNotificationMessage();
+                            }
+                        }
+                    } else {
+                        console.error(`알림 ${notificationId} 삭제 실패`);
+                    }
+                }).catch(error => console.error('알림 삭제 중 네트워크 오류:', error));
+            }
+
+            // 웹사이트가 활성화된 상태에서 FCM 알림을 수신
+            onMessage(messaging, (payload) => {
+                console.log('포그라운드 FCM 메시지 수신: ', payload);
+                updateNotificationUI({
+                    message: payload.notification.body,
+                    link: payload.data.link
+                });
+            });
+
+            // --- Event Listeners ---
+
+            // [추가] 삭제 버튼에 대한 이벤트 위임 리스너
+            notificationList.addEventListener('click', function(event) {
+                // 클릭된 요소가 삭제 버튼인지 확인
+                if (event.target.classList.contains('delete-notification-btn')) {
+                    const li = event.target.closest('li');
+                    const notificationId = li.getAttribute('data-notification-id');
+                    if(notificationId) {
+                        deleteNotification(notificationId);
+                    }
+                }
+            });
+
+            // --- 최종 실행 시작점 ---
+            Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                    console.log('알림 권한이 허용되었습니다.');
+                    getTokenAndSendToServer();
+                } else {
+                    console.log('알림 권한이 거부되었습니다. 초기 알림 로드만 진행합니다.');
+                    fetchInitialNotifications();
+                }
+            });
+
+        </script>
+    </div>
+
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
+        <div class="container-fluid">
+            <a class="navbar-brand" th:href="@{/}">PolyAI HUB</a>
+            <button class="navbar-toggler" data-bs-target="#navbarNav" data-bs-toggle="collapse" type="button">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" th:href="@{/notice}">공지사항</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/free}">자유게시판</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/archive}">자료실</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/schedule}">일정</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/survey}">설문</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/bookSearch}">도서 검색</a></li>
+                </ul>
+
+                <!-- 로그인 상태 -->
+                <div class="d-flex align-items-center" sec:authorize="isAuthenticated()">
+                    <!-- 알림 아이콘 및 드롭다운 -->
+                    <div class="nav-item dropdown me-3">
+                        <a aria-expanded="false" class="nav-link" data-bs-toggle="dropdown" href="#" role="button">
+                            <span class="position-relative">
+                                <i class="bi bi-bell-fill fs-5"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                      id="notification-badge"
+                                      style="font-size: 0.6em; display: none;">0</span>
+                            </span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" id="notification-list"
+                            style="width: 350px; max-height: 400px; overflow-y: auto;">
+                            <li><a class="dropdown-item text-muted text-center" href="#">알림이 없습니다.</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- 사용자 정보 -->
+                    <span class="navbar-text me-3">
+                        <span sec:authentication="name"></span> 님
+                    </span>
+
+                    <a class="btn btn-outline-danger me-2" sec:authorize="hasRole('ADMIN')" th:href="@{/admin}">관리자</a>
+                    <a class="btn btn-outline-secondary me-2" th:href="@{/mypage}">마이페이지</a>
+
+                    <form method="post" th:action="@{/logout}">
+                        <input th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"
+                               type="hidden"/>
+                        <button class="btn btn-outline-danger" type="submit">로그아웃</button>
+                    </form>
+                </div>
+
+                <!-- 비로그인 상태 -->
+                <div class="d-flex" sec:authorize="isAnonymous()">
+                    <a class="btn btn-outline-primary me-2" th:href="@{/login}">로그인</a>
+                    <a class="btn btn-primary" th:href="@{/register}">회원가입</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+</div>

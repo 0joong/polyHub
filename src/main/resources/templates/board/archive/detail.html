@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${archive.title} + ' - 자료실'">자료실 상세보기</title>
+    <link rel="stylesheet" th:href="@{/css/lux.min.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- [수정] 올바른 Toast UI Editor CSS 링크로 변경 -->
+    <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
+    <!-- [추가] 코드 문법 강조(Highlighting)를 위한 CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+
+
+    <!-- [추가] 이미지 반응형 처리를 위한 스타일 -->
+    <style>
+        .content-body img {
+            max-width: 100%; /* 이미지가 부모 요소의 너비를 초과하지 않도록 설정 */
+            height: auto;    /* 이미지의 가로세로 비율을 유지 */
+            display: block;  /* 이미지 아래 불필요한 여백 제거 */
+            margin: 1rem 0;  /* 이미지 위아래 여백 추가 */
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{layout/header :: header}"></div>
+
+<div class="container my-5">
+    <!-- 게시글 제목 -->
+    <h2 class="mb-3" th:text="${archive.title}">게시글 제목입니다.</h2>
+
+    <!-- 게시글 메타 정보 -->
+    <div class="d-flex justify-content-start text-muted small mb-3">
+        <span class="me-3"><i class="bi bi-person-fill me-1"></i> <span th:text="${archive.writer}">작성자</span></span>
+        <span class="me-3"><i class="bi bi-calendar-check me-1"></i> <span th:text="${#temporals.format(archive.createdAt, 'yyyy-MM-dd HH:mm')}">2025-06-13 10:00</span></span>
+        <span><i class="bi bi-eye-fill me-1"></i> <span th:text="${archive.viewCount}">0</span></span>
+    </div>
+
+    <hr>
+
+    <!-- 첨부 파일 목록 -->
+    <div class="mb-4" th:if="${not #lists.isEmpty(archive.files)}">
+        <p><strong>첨부 파일</strong></p>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item" th:each="file : ${archive.files}">
+                <!-- [수정] 파일 다운로드 링크로 변경해야 합니다. -->
+                <a th:href="@{/archive/download/{fileId}(fileId=${file.id})}" class="text-decoration-none">
+                    <i class="bi bi-download me-2"></i>
+                    <span th:text="${file.originalFileName}">filename.zip</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <hr class="my-4">
+
+    <!-- [수정] 게시글 본문 표시 방식 변경 -->
+    <!-- th:text 대신 th:utext를 사용하여 HTML 태그가 정상적으로 렌더링되도록 합니다. -->
+    <!-- [수정] 본문 div에 toastui-editor-contents 클래스 추가 -->
+    <div class="toastui-editor-contents" th:utext="${archive.content}"></div>
+
+    <hr class="my-4">
+
+    <!-- 버튼 목록 -->
+    <div class="d-flex justify-content-between">
+        <!-- 목록으로 돌아가기 버튼 -->
+        <a th:href="@{/archive}" class="btn btn-secondary">목록</a>
+
+        <!-- 수정 및 삭제 버튼 (관리자/매니저에게만 보임) -->
+        <div sec:authorize="hasAnyRole('MANAGER', 'ADMIN')">
+            <a th:href="@{/archive/edit/{id}(id=${archive.id})}" class="btn btn-warning">수정</a>
+            <!-- 삭제는 form으로 처리하여 CSRF 공격 방지 -->
+            <form th:action="@{/archive/delete/{id}(id=${archive.id})}" method="post" class="d-inline" onsubmit="return confirm('정말로 삭제하시겠습니까?');">
+                <button type="submit" class="btn btn-danger">삭제</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>자료실 글쓰기</title>
+    <link rel="stylesheet" th:href="@{/css/lux.min.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
+</head>
+<body>
+<div th:replace="~{layout/header :: header}"></div>
+
+<div class="container my-5">
+    <h2 class="mb-4">자료실 글쓰기</h2>
+
+    <!-- [수정] 폼에 onsubmit 이벤트 추가 -->
+    <form id="writeForm" th:action="@{/archive/write}" method="post" enctype="multipart/form-data" onsubmit="return onEditorSubmit();">
+        <!-- [추가] 에디터의 내용을 서버로 전송하기 위한 숨겨진 필드 -->
+        <input type="hidden" name="content" id="content">
+
+        <div class="mb-3">
+            <label for="title" class="form-label">제목</label>
+            <input type="text" class="form-control" id="title" name="title" placeholder="제목을 입력하세요" required>
+        </div>
+
+        <!-- [수정] 내용 입력 부분을 div로 변경 -->
+        <div class="mb-3">
+            <label class="form-label">내용</label>
+            <div id="editor"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="formFileMultiple" class="form-label">첨부 파일 (다운로드용)</label>
+            <input class="form-control" type="file" id="formFileMultiple" name="newFiles" multiple>
+            <div class="form-text">본문에 넣는 이미지가 아닌, 별도로 다운로드할 파일을 첨부하세요.</div>
+        </div>
+
+        <hr class="my-4">
+
+        <div class="d-flex justify-content-end">
+            <a th:href="@{/archive}" class="btn btn-secondary me-2">취소</a>
+            <button type="submit" class="btn btn-primary">저장</button>
+        </div>
+    </form>
+</div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+<!-- [추가] Toast UI Editor JS 및 초기화 스크립트 -->
+<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+<script th:inline="javascript">
+    const editor = new toastui.Editor({
+        el: document.querySelector('#editor'),
+        height: '500px',
+        initialEditType: 'wysiwyg',
+        previewStyle: 'vertical',
+        language: 'ko-KR',
+
+        // [추가] 이미지 업로드 처리를 위한 훅(Hook) 설정
+        hooks: {
+            addImageBlobHook: (blob, callback) => {
+                const formData = new FormData();
+                formData.append('image', blob);
+
+                // 1. 방금 만든 이미지 업로드 API를 호출합니다.
+                fetch('/api/image-upload', {
+                    method: 'POST',
+                    body: formData,
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        // 2. 서버로부터 받은 이미지 URL을 에디터의 callback 함수에 전달합니다.
+                        //    (두 번째 인자는 alt 텍스트입니다)
+                        callback(data.url, '이미지 설명');
+                    })
+                    .catch(error => {
+                        console.error('이미지 업로드 실패:', error);
+                        // 실패 시 에러 메시지를 표시하거나 다른 처리를 할 수 있습니다.
+                    });
+            }
+        }
+    });
+
+    function onEditorSubmit() {
+        document.querySelector('#content').value = editor.getHTML();
+        return true;
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>얼굴 인식 로그인</title>
+  <link rel="stylesheet" th:href="@{/css/lux.min.css}">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f8f9fa;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    #video {
+      width: 100%;
+      max-height: 300px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      object-fit: cover;
+      margin-top: 10px;
+    }
+
+    #status {
+      margin-top: 10px;
+    }
+
+    .back-btn {
+      width: 100%;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+<div class="login-container text-center">
+  <h2 class="mb-3">얼굴 인식 로그인</h2>
+  <p class="text-muted mb-2">카메라를 허용하고 얼굴을 화면 중앙에 위치시켜 주세요.</p>
+
+  <!-- 카메라 영상 -->
+  <video id="video" autoplay muted></video>
+
+  <!-- 상태 메시지 -->
+  <div id="status" class="mt-2 text-success"></div>
+
+  <!-- 뒤로가기 버튼 -->
+  <a th:href="@{/login}" class="btn btn-secondary back-btn">뒤로가기</a>
+</div>
+</body>
+</html>
+<script>
+  const video = document.getElementById('video');
+  const statusDiv = document.getElementById('status');
+
+  navigator.mediaDevices.getUserMedia({ video: true })
+          .then(stream => {
+            video.srcObject = stream;
+            statusDiv.textContent = "카메라가 활성화되었습니다.";
+            setInterval(captureAndSendFrame, 500);
+          })
+          .catch(error => {
+            statusDiv.textContent = "카메라 접근이 거부되었습니다.";
+            statusDiv.classList.replace("text-success", "text-danger");
+          });
+
+  function captureAndSendFrame() {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(blob => {
+          const formData = new FormData();
+          formData.append('file', blob, 'capture.jpg');
+
+          // Flask 엔드포인트로 요청 보내기
+          fetch('https://polyhub.dev:5000/api/face-login', {
+              method: 'POST',
+              body: formData,
+              credentials: 'include' // 세션 쿠키 전달!
+          })
+              .then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      window.location.href = "/";  // 예: 로그인 성공 후 이동
+                  } else {
+                      console.log("인식 실패:", data.message || "알 수 없는 오류");
+                  }
+              })
+              .catch(error => {
+                  console.error("Flask 서버 오류:", error);
+              });
+      }, 'image/jpeg');
+  }
+
+</script>

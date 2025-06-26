@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="kr">
+<head>
+  <meta charset="UTF-8">
+  <title>아이디 찾기</title>
+  <link rel="stylesheet" th:href="@{/css/lux.min.css}">
+</head>
+<body>
+<div class="container mt-5" style="max-width: 480px;">
+  <h2 class="mb-4 text-center">아이디 찾기</h2>
+
+  <!-- 아이디 찾기 입력 폼 -->
+  <form method="post" th:action="@{/find-id}">
+    <div class="mb-3">
+      <label for="name" class="form-label">이름</label>
+      <input type="text" class="form-control" id="name" name="name" placeholder="가입 시 등록한 이름을 입력하세요" required>
+    </div>
+    <div class="mb-3">
+      <label for="phone" class="form-label">전화번호</label>
+      <input type="tel" class="form-control" id="phone" name="phone" placeholder="'-' 없이 숫자만 입력하세요" required>
+    </div>
+    <div class="d-grid gap-2">
+      <button type="submit" class="btn btn-primary">아이디 찾기</button>
+    </div>
+  </form>
+
+  <hr class="my-4">
+
+  <!-- 결과 표시 영역 -->
+  <div th:if="${foundId != null}" class="alert alert-success text-center">
+    회원님의 아이디는 <strong th:text="${foundId}">your_id@example.com</strong> 입니다.
+  </div>
+  <div th:if="${error != null}" class="alert alert-danger text-center" th:text="${error}">
+    일치하는 회원 정보가 없습니다.
+  </div>
+
+  <div class="text-center mt-3">
+    <a th:href="@{/login}" class="text-decoration-none small">로그인 페이지로 돌아가기</a>
+  </div>
+</div>
+</body>
+</html>

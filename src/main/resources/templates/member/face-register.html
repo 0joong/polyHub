@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>얼굴 인식 등록</title>
+  <link rel="stylesheet" href="/css/lux.min.css">
+</head>
+<body>
+<div th:replace="layout/header :: header"></div>
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h2 class="card-title mb-4">얼굴 인식 등록</h2>
+          <div class="mb-4">
+            <video id="video" class="rounded border border-secondary" width="500" height="400" autoplay muted></video>
+          </div>
+          <button class="btn btn-primary btn-lg mb-2" onclick="captureFace()">사진 촬영</button>
+          <p id="status" class="text-muted small">정면을 바라보고 촬영해주세요!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  let captureCount = 0; // 현재까지 찍은 사진 수
+  const guideMessages = ['정면을 바라보고 촬영해주세요!', '오른쪽을 바라보고 촬영해주세요!', '왼쪽을 바라보고 촬영해주세요!'];
+
+  async function captureFace() {
+    if (captureCount >= 3) {
+      alert('사진은 3장까지만 등록 가능합니다.');
+      return;
+    }
+
+    alert(guideMessages[captureCount]);
+
+    const video = document.getElementById('video');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(async (blob) => {
+      const formData = new FormData();
+      formData.append('file', blob, `face_${captureCount + 1}.png`);
+
+      try {
+        const response = await fetch('/api/face-register', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include' // 🔥 세션 인증 유지
+        });
+
+        if (!response.ok) {
+          alert('서버 오류! 다시 시도해주세요.');
+          return;
+        }
+
+        const result = await response.json();
+        console.log("🔎 실제 응답:", result);
+
+        if (result.success) {
+          captureCount++;
+          alert(`사진 ${captureCount}장 등록 완료!`);
+
+          if (captureCount >= 3) {
+            alert('얼굴 3장 등록이 완료되었습니다!');
+            window.location.href = '/';
+          }
+        } else {
+          alert('등록 실패! 다시 시도해주세요.');
+        }
+      } catch (error) {
+        console.error(error);
+        alert('네트워크 오류! 다시 시도해주세요.');
+      }
+    }, 'image/png');
+  }
+
+    async function startCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            document.getElementById('video').srcObject = stream;
+        } catch (err) {
+            alert('카메라를 시작할 수 없습니다. 브라우저 권한을 확인해주세요.');
+        }
+    }
+
+    startCamera();
+</script>
+</body>
+</html>

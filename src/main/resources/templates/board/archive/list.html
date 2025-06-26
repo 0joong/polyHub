@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <meta charset="UTF-8">
+  <title>자료실</title>
+  <link rel="stylesheet" th:href="@{/css/lux.min.css}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    .card-icon { font-size: 4rem; color: #dee2e6; }
+    .card { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; height: 100%; }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15); }
+    .card-body { display: flex; flex-direction: column; }
+    .card-footer { margin-top: auto; }
+    .pagination .page-item.active .page-link { z-index: 1; }
+  </style>
+</head>
+<body>
+<div th:replace="~{layout/header :: header}"></div>
+
+<div class="container my-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">자료실</h2>
+    <a th:href="@{/archive/write}" class="btn btn-primary" sec:authorize="hasAnyRole('MANAGER', 'ADMIN')">
+      <i class="bi bi-pencil-square me-2"></i>글쓰기
+    </a>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-6 offset-md-6">
+      <!-- [수정] 검색 폼의 action 주소와 input의 value 수정 -->
+      <form class="d-flex" th:action="@{/archive}" method="get">
+        <input class="form-control me-2" type="search" name="keyword" placeholder="검색어 입력" th:value="${keyword}">
+        <button class="btn btn-outline-primary" type="submit">검색</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 자료 목록 (카드 그리드) -->
+  <div class="row">
+    <div class="col-md-6 col-lg-4 mb-4" th:each="archive : ${archives}">
+      <div class="card text-center">
+        <div class="card-body">
+          <div class="mb-3">
+            <!-- [수정] DTO의 hasFiles 필드를 사용하여 아이콘 변경 -->
+            <i class="bi card-icon" th:classappend="${archive.hasFiles} ? 'bi-file-earmark-zip' : 'bi-file-earmark-text'"></i>
+          </div>
+          <h5 class="card-title" th:text="${archive.title}">게시글 제목</h5>
+          <p class="card-text text-muted small">
+            작성자: <span th:text="${archive.writer}">작성자</span><br>
+            작성일: <span th:text="${#temporals.format(archive.createdAt, 'yyyy-MM-dd')}">작성일</span> | 조회수: <span th:text="${archive.viewCount}">0</span>
+          </p>
+        </div>
+        <div class="card-footer bg-transparent border-top-0">
+          <a th:href="@{/archive/{id}(id=${archive.id})}" class="btn btn-primary w-100">자세히 보기</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 게시글이 없을 경우 -->
+    <div class="col-12" th:if="${archives.empty}">
+      <div class="card py-5 text-center">
+        <div class="card-body">
+          <p class="h4 text-muted">등록된 자료가 없습니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- [수정] 페이지네이션 링크 주소와 keyword 파라미터 수정 -->
+  <nav aria-label="Page navigation" class="mt-4" th:if="${!archives.empty and archives.totalPages > 1}">
+    <ul class="pagination justify-content-center">
+      <!-- 이전 페이지 -->
+      <li class="page-item" th:classappend="${archives.first} ? 'disabled'">
+        <a class="page-link" th:href="@{/archive(page=${archives.number - 1}, keyword=${keyword})}">
+          <span>&laquo;</span>
+        </a>
+      </li>
+      <!-- 페이지 번호 목록 -->
+      <li class="page-item" th:each="pageNumber : ${#numbers.sequence(0, archives.totalPages - 1)}" th:classappend="${pageNumber == archives.number} ? 'active'">
+        <a class="page-link" th:href="@{/archive(page=${pageNumber}, keyword=${keyword})}" th:text="${pageNumber + 1}">1</a>
+      </li>
+      <!-- 다음 페이지 -->
+      <li class="page-item" th:classappend="${archives.last} ? 'disabled'">
+        <a class="page-link" th:href="@{/archive(page=${archives.number + 1}, keyword=${keyword})}">
+          <span>&raquo;</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+</div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>
+'

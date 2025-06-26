@@ -1,0 +1,73 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>관리자 페이지</title>
+  <link rel="stylesheet" th:href="@{/css/lux.min.css}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    .sidebar .list-group-item.active { background-color: #0d6efd; border-color: #0d6efd; }
+  </style>
+</head>
+<body>
+<div th:replace="~{layout/header :: header}"></div>
+
+<div class="container-fluid my-4">
+  <div class="row">
+    <!-- 사이드바 메뉴 -->
+    <nav class="col-md-2 d-none d-md-block bg-light sidebar vh-100">
+      <div class="position-sticky pt-3">
+        <h4 class="px-3 mb-3">관리자 메뉴</h4>
+        <div class="list-group list-group-flush">
+          <a href="#dashboard" class="list-group-item list-group-item-action active" data-bs-toggle="list">
+            <i class="bi bi-speedometer2 me-2"></i>대시보드
+          </a>
+          <a href="#member_management" class="list-group-item list-group-item-action" data-bs-toggle="list">
+            <i class="bi bi-people-fill me-2"></i>회원 관리
+          </a>
+          <a href="#notification" class="list-group-item list-group-item-action" data-bs-toggle="list">
+            <i class="bi bi-send-fill me-2"></i>알림 보내기
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="col-md-10 ms-sm-auto px-md-4">
+      <!-- [수정] th:replace를 사용할 div에 더 이상 class나 id가 필요 없습니다. -->
+      <div class="tab-content pt-3">
+        <div th:replace="~{admin/dashboard :: dashboardFragment}"></div>
+        <div th:replace="~{admin/member_management :: memberManagementFragment}"></div>
+        <div th:replace="~{admin/notification :: notificationFragment}"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+<!-- URL 해시에 따라 탭을 활성화하는 스크립트 -->
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const activateTab = () => {
+      const hash = window.location.hash || '#dashboard';
+      const tabEl = document.querySelector(`a[data-bs-toggle="list"][href="${hash}"]`);
+      if (tabEl) {
+        const tab = new bootstrap.Tab(tabEl);
+        tab.show();
+      }
+    };
+    activateTab();
+    window.addEventListener('hashchange', activateTab);
+    document.querySelectorAll('a[data-bs-toggle="list"]').forEach(tabEl => {
+      tabEl.addEventListener('click', function (event) {
+        if(history.pushState) {
+          history.pushState(null, null, this.getAttribute('href'));
+        } else {
+          location.hash = this.getAttribute('href');
+        }
+      });
+    });
+  });
+</script>
+</body>
+</html>

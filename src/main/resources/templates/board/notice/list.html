@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="kr">
+<head>
+  <meta charset="UTF-8">
+  <title>공지사항</title>
+  <link rel="stylesheet" th:href="@{/css/lux.min.css}">
+</head>
+<body>
+<div th:replace="layout/header :: header"></div>
+<div class="container mt-5">
+  <h2 class="mb-4">공지사항</h2>
+
+  <div class="mb-3 text-end">
+    <a href="/notice/write" class="btn btn-primary">새 글 작성</a>
+  </div>
+
+  <table class="table table-striped">
+    <thead>
+    <tr>
+      <th>번호</th>
+      <th>제목</th>
+      <th>작성자</th>
+      <th>작성일</th>
+      <th>조회수</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="notice : ${notices}">
+      <td th:text="${notice.id}">1</td>
+      <td>
+        <a th:href="@{'/notice/' + ${notice.id}}" th:text="${notice.title}">공지사항 제목</a>
+        <span th:if="${notice.isPinned}" class="badge bg-danger ms-2">공지</span>
+      </td>
+      <td th:text="${notice.writer}">작성자</td>
+      <td th:text="${#temporals.format(notice.createdAt, 'yyyy-MM-dd')}">2025-06-09</td>
+      <td th:text="${notice.view_cnt}">0</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+
+<nav aria-label="Page navigation">
+  <ul class="pagination justify-content-center">
+    <li class="page-item" th:classappend="${noticePage.first} ? 'disabled'">
+      <a class="page-link" th:href="@{|/notice?page=${noticePage.number - 1}|}">이전</a>
+    </li>
+    <li class="page-item" th:each="i : ${#numbers.sequence(0, noticePage.totalPages - 1)}"
+        th:classappend="${i == noticePage.number} ? 'active'">
+      <a class="page-link" th:href="@{|/notice?page=${i}|}" th:text="${i + 1}">1</a>
+    </li>
+    <li class="page-item" th:classappend="${noticePage.last} ? 'disabled'">
+      <a class="page-link" th:href="@{|/notice?page=${noticePage.number + 1}|}">다음</a>
+    </li>
+  </ul>
+</nav>
+<div th:replace="layout/footer :: footer"></div>
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

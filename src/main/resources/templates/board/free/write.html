@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <meta charset="UTF-8">
+  <title>새 글 작성</title>
+  <link rel="stylesheet" th:href="@{/css/lux.min.css}">
+  <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
+  <style>
+    /* 에디터의 최소 높이를 설정합니다. */
+    .toastui-editor-defaultUI {
+      border: 1px solid #dee2e6;
+    }
+    .toastui-editor-contents {
+      min-height: 400px;
+    }
+  </style>
+</head>
+<body>
+<div th:replace="~{layout/header :: header}"></div>
+
+<div class="container my-5">
+  <h2 class="mb-4">새 글 작성</h2>
+
+  <form id="writeForm" th:action="@{/free/write}" method="post" onsubmit="return onEditorSubmit();">
+    <!-- <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />-->
+
+    <!-- 에디터의 내용을 서버로 전송하기 위한 숨겨진 필드 -->
+    <input type="hidden" name="content" id="content">
+
+    <div class="mb-3">
+      <label for="title" class="form-label">제목</label>
+      <input type="text" class="form-control" id="title" name="title" placeholder="제목을 입력하세요" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">내용</label>
+      <!-- 에디터가 적용될 div -->
+      <div id="editor"></div>
+    </div>
+
+    <hr class="my-4">
+
+    <div class="d-flex justify-content-end">
+      <a th:href="@{/free}" class="btn btn-secondary me-2">취소</a>
+      <button type="submit" class="btn btn-primary">작성 완료</button>
+    </div>
+  </form>
+</div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+<script>
+  // 1. 에디터 인스턴스 생성
+  const editor = new toastui.Editor({
+    el: document.querySelector('#editor'),      // 에디터를 적용할 요소
+    height: '500px',                            // 에디터 높이
+    initialEditType: 'wysiwyg',                 // 초기 모드 (wysiwyg 또는 markdown)
+    previewStyle: 'vertical',                   // 마크다운 프리뷰 스타일
+    language: 'ko-KR'                           // 한글 설정
+  });
+
+  // 2. 폼 제출 시 에디터 내용을 숨겨진 input에 담는 함수
+  function onEditorSubmit() {
+    // 에디터의 HTML 내용을 가져옵니다.
+    const content = editor.getHTML();
+    // 숨겨진 input 태그('content')에 값을 설정합니다.
+    document.querySelector('#content').value = content;
+    // 폼 제출을 계속 진행합니다.
+    return true;
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>마이페이지</title>
+    <link rel="stylesheet" th:href="@{/css/lux.min.css}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+</head>
+<body>
+<div th:replace="~{layout/header :: header}"></div>
+
+<div class="container my-5">
+    <div class="row">
+        <!-- 1. 사이드바 메뉴 -->
+        <div class="col-md-3">
+            <h4 class="mb-3">마이페이지</h4>
+            <div class="list-group" id="sidebar">
+                <a class="list-group-item list-group-item-action active" data-bs-toggle="list" href="#profile">
+                    <i class="bi bi-person-circle me-2"></i>내 정보 확인
+                </a>
+                <a class="list-group-item list-group-item-action" data-bs-toggle="list" href="#change-password">
+                    <i class="bi bi-key-fill me-2"></i>비밀번호 변경
+                </a>
+                <a class="list-group-item list-group-item-action text-danger" data-bs-toggle="list" href="#withdraw">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>회원 탈퇴
+                </a>
+            </div>
+        </div>
+
+        <!-- 2. 메인 컨텐츠 영역 -->
+        <div class="col-md-9">
+            <div class="tab-content">
+                <!-- 2-1. 내 정보 확인 탭 (기본으로 보임) -->
+                <div class="tab-pane fade show active" id="profile">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">내 정보</h5>
+                            <!-- TODO: 프로필 수정 폼으로 전환하는 기능 추가 필요 -->
+                            <a class="btn btn-outline-primary btn-sm" href="#">프로필 수정</a>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-body">
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item">
+                                        <div class="row">
+                                            <strong class="col-sm-3">아이디 (이메일)</strong>
+                                            <div class="col-sm-9 text-secondary" th:text="${member.email}">
+                                                user@example.com
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <div class="row">
+                                            <strong class="col-sm-3">이름</strong>
+                                            <div class="col-sm-9 text-secondary" th:text="${member.name}">홍길동</div>
+                                        </div>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <div class="row">
+                                            <strong class="col-sm-3">전화번호</strong>
+                                            <div class="col-sm-9 text-secondary" th:text="${member.phone}">
+                                                010-1234-5678
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <div class="row">
+                                            <strong class="col-sm-3">가입일</strong>
+                                            <div class="col-sm-9 text-secondary"
+                                                 th:text="${#temporals.format(member.createdAt, 'yyyy년 MM월 dd일')}">2025년
+                                                01월 01일
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <div class="row">
+                                            <strong class="col-sm-3">권한</strong>
+                                            <div class="col-sm-9 text-secondary">
+                                                <span class="badge bg-primary" th:text="${member.role}">ADMIN</span>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2-2. 비밀번호 변경 탭 (숨겨져 있음) -->
+                <div class="tab-pane fade" id="change-password">
+                    <div class="card">
+                        <div class="card-header"><h5 class="mb-0">비밀번호 변경</h5></div>
+                        <div class="card-body">
+                            <form method="post" style="max-width: 480px; margin: auto;"
+                                  th:action="@{/mypage/change-password}">
+
+                                <!-- 성공 또는 에러 메시지를 표시하는 영역 -->
+                                <div th:if="${passwordSuccess}" class="alert alert-success" th:text="${passwordSuccess}"></div>
+                                <div th:if="${passwordError}" class="alert alert-danger" th:text="${passwordError}"></div>
+
+                                <div class="mb-3">
+                                    <label for="currentPassword" class="form-label">현재 비밀번호</label>
+                                    <input type="password" class="form-control" id="currentPassword" name="currentPassword" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="newPassword" class="form-label">새 비밀번호</label>
+                                    <input type="password" class="form-control" id="newPassword" name="newPassword" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="confirmPassword" class="form-label">새 비밀번호 확인</label>
+                                    <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary">비밀번호 변경</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2-4. 회원 탈퇴 탭 -->
+                <div class="tab-pane fade" id="withdraw">
+                    <div class="card">
+                        <div class="card-header"><h5 class="mb-0">회원 탈퇴</h5></div>
+                        <div class="card-body">
+                            <div class="alert alert-danger">
+                                <strong><i class="bi bi-exclamation-triangle-fill"></i> 주의하세요!</strong><br>
+                                회원 탈퇴 시 모든 개인 정보 및 활동 기록이 영구적으로 삭제되며 복구할 수 없습니다.
+                            </div>
+                            <form th:action="@{/mypage/withdraw}" method="post" style="max-width: 480px; margin: auto;">
+                                <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                <div th:if="${withdrawError}" class="alert alert-danger" th:text="${withdrawError}"></div>
+                                <div class="mb-3">
+                                    <label for="withdrawPassword" class="form-label">비밀번호 확인</label>
+                                    <input type="password" class="form-control" id="withdrawPassword" name="password" required>
+                                </div>
+                                <div class="form-check mb-4">
+                                    <input class="form-check-input" type="checkbox" id="confirmWithdraw" required>
+                                    <label class="form-check-label" for="confirmWithdraw">위 유의사항을 모두 확인했으며, 탈퇴에 동의합니다.</label>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-danger">회원 탈퇴 진행</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+<!-- [추가] URL 해시에 따라 탭을 활성화하는 스크립트 -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const hash = window.location.hash;
+        if (hash) {
+            // URL에 해시(#)가 있으면, 그 해시를 가리키는 탭 트리거를 찾습니다.
+            const tabEl = document.querySelector(`a[data-bs-toggle="list"][href="${hash}"]`);
+            if (tabEl) {
+                // 부트스트랩의 Tab 객체를 생성하고, 해당 탭을 보여줍니다.
+                const tab = new bootstrap.Tab(tabEl);
+                tab.show();
+            }
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${post.title}">게시글 상세</title>
+    <link rel="stylesheet" th:href="@{/css/lux.min.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .reaction-buttons { display: flex; gap: 0.5rem; }
+        .reaction-buttons .btn { flex-grow: 1; font-size: 1.1rem; padding: 0.75rem 0; }
+        .content-body img { max-width: 100%; height: auto; }
+        .comment-thread { border-left: 1px solid #eee; }
+        .comment-block { padding: 1rem; border-bottom: 1px solid #eee; }
+        .reply-block { margin-left: 2.5rem; padding: 1rem; background-color: #f8f9fa; border-top: 1px solid #eee; border-radius: 0.25rem; }
+    </style>
+</head>
+<body>
+<div th:replace="~{layout/header :: header}"></div>
+
+<div class="container my-5" th:if="${post != null}">
+    <!-- 게시글 본문 영역 -->
+    <article>
+        <h2 class="mb-3" th:text="${post.title}">게시글 제목</h2>
+        <div class="d-flex align-items-center text-muted small border-bottom pb-3 mb-3">
+            <span class="fw-bold me-3"><i class="bi bi-person-fill"></i> <span th:text="${post.writer}">작성자</span></span>
+            <span class="me-3"><i class="bi bi-calendar-check"></i> <span th:text="${#temporals.format(post.createdAt, 'yyyy.MM.dd HH:mm')}">작성일</span></span>
+            <span><i class="bi bi-eye-fill"></i> <span th:text="${post.viewCount}">0</span></span>
+        </div>
+
+        <div class="content-body py-4" style="min-height: 200px;" th:utext="${post.content}"></div>
+
+        <div class="d-flex justify-content-center my-4">
+            <div class="reaction-buttons col-md-6" th:attr="data-post-id=${post.id}">
+                <button class="btn" th:classappend="${post.userReaction == 'LIKE'} ? 'btn-primary' : 'btn-outline-primary'" data-reaction-type="LIKE">
+                    <i class="bi bi-hand-thumbs-up-fill"></i> 추천 <span class="like-count" th:text="${post.likeCount}">0</span>
+                </button>
+                <button class="btn" th:classappend="${post.userReaction == 'DISLIKE'} ? 'btn-danger' : 'btn-outline-danger'" data-reaction-type="DISLIKE">
+                    <i class="bi bi-hand-thumbs-down-fill"></i> 비추천 <span class="dislike-count" th:text="${post.dislikeCount}">0</span>
+                </button>
+            </div>
+        </div>
+    </article>
+
+    <!-- 버튼 목록 -->
+    <div class="d-flex justify-content-between my-4">
+        <a th:href="@{/free}" class="btn btn-secondary">목록</a>
+
+        <!-- [최종 수정]
+             1. sec:authorize는 '로그인 여부'만 검사합니다.
+             2. th:if를 사용하여 '작성자 본인 여부'를 별도로 검사합니다.
+        -->
+        <div sec:authorize="isAuthenticated()">
+            <div th:if="${#authentication.principal.getMember().name == post.writer}">
+                <a th:href="@{/free/edit/{id}(id=${post.id})}" class="btn btn-warning">수정</a>
+                <form th:action="@{/free/delete/{id}(id=${post.id})}" method="post" class="d-inline" onsubmit="return confirm('정말로 삭제하시겠습니까?');">
+                    <!-- CSRF는 비활성화 상태이므로 주석 처리해도 괜찮습니다. -->
+                    <!-- <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" /> -->
+                    <button type="submit" class="btn btn-danger">삭제</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <hr>
+
+    <!-- 댓글 영역 -->
+    <div class="comments-section mt-5">
+        <h4 class="mb-3">댓글 <span id="comment-count" class="text-primary" th:text="${#lists.size(post.comments)}">0</span></h4>
+
+        <!-- 새 댓글 작성 폼 -->
+        <div class="card bg-light p-3 mb-4" sec:authorize="isAuthenticated()">
+            <form id="comment-form" onsubmit="submitComment(event, this);">
+                <input type="hidden" name="postId" th:value="${post.id}">
+                <div class="d-flex gap-2">
+                    <textarea class="form-control" name="content" rows="2" placeholder="따뜻한 댓글을 남겨주세요." required></textarea>
+                    <button type="submit" class="btn btn-primary">등록</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 댓글 목록 -->
+        <div id="comment-list" class="comment-thread">
+            <div th:each="comment : ${post.comments}" th:id="'comment-' + ${comment.id}" class="comment-block">
+                <!-- 원댓글 -->
+                <div>
+                    <div class="d-flex justify-content-between">
+                        <strong><i class="bi bi-person-fill"></i> <span th:text="${comment.writer}"></span></strong>
+                        <small class="text-muted" th:text="${#temporals.format(comment.createdAt, 'yyyy.MM.dd HH:mm')}"></small>
+                    </div>
+                    <p class="mt-2 mb-1" th:text="${comment.content}"></p>
+                    <small sec:authorize="isAuthenticated()"><a href="javascript:void(0);" class="text-muted text-decoration-none" th:onclick="|showReplyForm(${comment.id})|">답글 달기</a></small>
+                </div>
+
+                <!-- 답글 목록 -->
+                <div class="reply-list" th:id="'reply-list-' + ${comment.id}">
+                    <div th:each="reply : ${comment.replies}" th:id="'comment-' + ${reply.id}" class="reply-block mt-3">
+                        <div class="d-flex justify-content-between">
+                            <strong><i class="bi bi-arrow-return-right"></i> <span th:text="${reply.writer}"></span></strong>
+                            <small class="text-muted" th:text="${#temporals.format(reply.createdAt, 'yyyy.MM.dd HH:mm')}"></small>
+                        </div>
+                        <p class="mt-2 mb-0" th:text="${reply.content}"></p>
+                    </div>
+                </div>
+
+                <!-- 답글 작성 폼이 나타날 위치 -->
+                <div th:id="'reply-form-container-' + ${comment.id}" class="reply-block mt-3" style="display: none;"></div>
+            </div>
+            <div th:if="${#lists.isEmpty(post.comments)}" class="text-center text-muted py-4">
+                작성된 댓글이 없습니다.
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const csrfToken = /*[[${_csrf} ? ${_csrf.token} : null]]*/ null;
+    const csrfHeader = /*[[${_csrf} ? ${_csrf.headerName} : null]]*/ null;
+    const headers = { 'Content-Type': 'application/json' };
+    if (csrfToken) {
+        headers[csrfHeader] = csrfToken;
+    }
+
+    function showReplyForm(parentCommentId) {
+        const container = document.getElementById('reply-form-container-' + parentCommentId);
+        if (container.innerHTML === '') {
+            container.innerHTML = `
+                <form class="reply-form" onsubmit="submitComment(event, this);">
+                    <input type="hidden" name="postId" value="[[${post.id}]]">
+                    <input type="hidden" name="parentId" value="${parentCommentId}">
+                    <div class="d-flex gap-2">
+                        <textarea class="form-control" name="content" rows="2" placeholder="답글을 입력하세요..." required></textarea>
+                        <button type="submit" class="btn btn-sm btn-secondary">등록</button>
+                    </div>
+                </form>
+            `;
+        }
+        container.style.display = container.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function submitComment(event, formElement) {
+        event.preventDefault();
+        const formData = new FormData(formElement);
+        const data = {
+            postId: formData.get('postId'),
+            parentId: formData.get('parentId') || null,
+            content: formData.get('content')
+        };
+
+        if (!data.content || data.content.trim() === '') {
+            alert('내용을 입력해주세요.');
+            return;
+        }
+
+        fetch('/api/comments', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(data)
+        })
+            .then(response => {
+                if (response.status === 401) throw new Error('로그인이 필요합니다.');
+                if (!response.ok) throw new Error('댓글 작성에 실패했습니다.');
+                return response.json();
+            })
+            .then(newComment => {
+                addCommentToUI(newComment);
+                formElement.querySelector('textarea').value = '';
+                if (data.parentId) {
+                    formElement.parentElement.style.display = 'none';
+                }
+            })
+            .catch(error => alert(error.message));
+    }
+
+    function addCommentToUI(comment) {
+        const noCommentMsg = document.getElementById('no-comment-message');
+        if (noCommentMsg) {
+            noCommentMsg.remove();
+        }
+
+        const newCommentElement = document.createElement('div');
+        newCommentElement.id = 'comment-' + comment.id;
+
+        const writer = comment.writer || '익명';
+        const createdAt = formatDateTime(comment.createdAt);
+
+        let html = '';
+
+        if (comment.parentId) {
+            newCommentElement.className = 'reply-block mt-3';
+            html = `
+                <div class="d-flex justify-content-between">
+                    <strong><i class="bi bi-arrow-return-right"></i> ${writer}</strong>
+                    <small class="text-muted">${createdAt}</small>
+                </div>
+                <p class="mt-2 mb-0">${comment.content}</p>
+            `;
+            const parentReplyList = document.getElementById('reply-list-' + comment.parentId);
+            if (parentReplyList) {
+                parentReplyList.appendChild(newCommentElement);
+            }
+        } else {
+            newCommentElement.className = 'comment-block';
+            html = `
+                <div>
+                    <div class="d-flex justify-content-between">
+                        <strong><i class="bi bi-person-fill"></i> ${writer}</strong>
+                        <small class="text-muted">${createdAt}</small>
+                    </div>
+                    <p class="mt-2 mb-1">${comment.content}</p>
+                    <small sec:authorize="isAuthenticated()"><a href="javascript:void(0);" class="text-muted text-decoration-none" onclick="showReplyForm(${comment.id})">답글 달기</a></small>
+                </div>
+                <div class="reply-list" id="reply-list-${comment.id}"></div>
+                <div id="reply-form-container-${comment.id}" class="reply-block mt-3" style="display: none;"></div>
+            `;
+            const commentListContainer = document.getElementById('comment-list');
+            commentListContainer.appendChild(newCommentElement);
+        }
+
+        newCommentElement.innerHTML = html;
+
+        const commentCountSpan = document.getElementById('comment-count');
+        commentCountSpan.textContent = parseInt(commentCountSpan.textContent) + 1;
+    }
+
+    function formatDateTime(isoString) {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}.${month}.${day} ${hours}:${minutes}`;
+    }
+
+    document.querySelectorAll('.reaction-buttons button').forEach(button => {
+        button.addEventListener('click', function() {
+            const reactionButtons = this.closest('.reaction-buttons');
+            const postId = reactionButtons.dataset.postId;
+            const reactionType = this.dataset.reactionType;
+
+            const fetchHeaders = { ...headers };
+
+            fetch(`/api/posts/${postId}/react?reactionType=${reactionType}`, {
+                method: 'POST',
+                headers: fetchHeaders
+            })
+                .then(response => {
+                    if(response.status === 401) {
+                        alert('로그인이 필요합니다.');
+                        return null;
+                    }
+                    if (!response.ok) throw new Error('Request failed');
+                    return response.json();
+                })
+                .then(data => {
+                    if(!data) return;
+
+                    reactionButtons.querySelector('.like-count').textContent = data.likeCount;
+                    reactionButtons.querySelector('.dislike-count').textContent = data.dislikeCount;
+
+                    const likeBtn = reactionButtons.querySelector('[data-reaction-type="LIKE"]');
+                    const dislikeBtn = reactionButtons.querySelector('[data-reaction-type="DISLIKE"]');
+
+                    likeBtn.className = 'btn ' + (data.userReaction === 'LIKE' ? 'btn-primary' : 'btn-outline-primary');
+                    dislikeBtn.className = 'btn ' + (data.userReaction === 'DISLIKE' ? 'btn-danger' : 'btn-outline-danger');
+                })
+                .catch(error => console.error('Error:', error));
+        });
+    });
+
+    /*]]>*/
+</script>
+</body>
+</html>

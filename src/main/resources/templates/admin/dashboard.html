@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="tab-pane fade" id="dashboard" th:classappend="${view == 'dashboard' or view == null} ? 'show active'" th:fragment="dashboardFragment">
+  <h3 class="mb-4">대시보드</h3>
+  <div class="row" th:if="${dashboard != null}">
+    <!-- 신규 가입자 -->
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="card border-start border-primary border-4 h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs fw-bold text-primary text-uppercase mb-1">신규 가입자 (24h)</div>
+              <div class="h5 mb-0 fw-bold text-gray-800" th:text="${dashboard.newUsersCount24h}">0</div>
+            </div>
+            <div class="col-auto">
+              <i class="bi bi-person-plus-fill fs-2 text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 총 회원 수 -->
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="card border-start border-success border-4 h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs fw-bold text-success text-uppercase mb-1">총 회원 수</div>
+              <div class="h5 mb-0 fw-bold text-gray-800" th:text="${dashboard.totalMembersCount}">0</div>
+            </div>
+            <div class="col-auto">
+              <i class="bi bi-people-fill fs-2 text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 월간 활성 사용자 -->
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="card border-start border-info border-4 h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs fw-bold text-info text-uppercase mb-1">월간 활성 사용자</div>
+              <div class="h5 mb-0 fw-bold text-gray-800" th:text="${dashboard.monthlyActiveUsersCount}">0</div>
+            </div>
+            <div class="col-auto">
+              <i class="bi bi-person-check-fill fs-2 text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 일일 게시글/댓글 -->
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="card border-start border-warning border-4 h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs fw-bold text-warning text-uppercase mb-1">일일 게시글/댓글</div>
+              <div class="h5 mb-0 fw-bold text-gray-800">
+                <span th:text="${dashboard.dailyPostsCount}">0</span> / <span th:text="${dashboard.dailyCommentsCount}">0</span>
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="bi bi-chat-left-text-fill fs-2 text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

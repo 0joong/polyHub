@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>글 수정</title>
+    <link rel="stylesheet" th:href="@{/css/lux.min.css}">
+    <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
+    <style>
+        .ck-editor__editable_inline {
+            min-height: 400px;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{layout/header :: header}"></div>
+
+<div class="container my-5">
+    <h2 class="mb-4">글 수정</h2>
+
+    <!-- [수정] 폼의 action 경로와 th:object 설정 -->
+    <form id="editForm" th:action="@{/free/edit/{id}(id=${post.id})}" th:object="${post}" method="post" onsubmit="return onEditorSubmit();">
+        <input type="hidden" name="content" id="content">
+
+        <div class="mb-3">
+            <label for="title" class="form-label">제목</label>
+            <!-- [수정] th:field를 사용하여 기존 제목을 채웁니다. -->
+            <input type="text" class="form-control" id="title" name="title" th:field="*{title}" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">내용</label>
+            <!-- 에디터가 적용될 div -->
+            <div id="editor"></div>
+        </div>
+
+        <hr class="my-4">
+
+        <div class="d-flex justify-content-end">
+            <a th:href="@{/free/{id}(id=${post.id})}" class="btn btn-secondary me-2">취소</a>
+            <button type="submit" class="btn btn-primary">수정 완료</button>
+        </div>
+    </form>
+</div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+    // [수정] 컨트롤러에서 받은 기존 내용을 에디터의 초기값으로 설정합니다.
+    const initialContent = /*[[${post.content}]]*/ '';
+
+    const editor = new toastui.Editor({
+        el: document.querySelector('#editor'),
+        height: '500px',
+        initialEditType: 'wysiwyg',
+        language: 'ko-KR',
+        initialValue: initialContent // 기존 내용 설정
+    });
+
+    function onEditorSubmit() {
+        // 에디터의 HTML 내용을 숨겨진 input 필드에 담아 전송합니다.
+        document.querySelector('#content').value = editor.getHTML();
+        return true;
+    }
+
+    /*]]>*/
+</script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- [수정] 클래스에 'show active'를 추가하여 htmx 교체 후에도 항상 보이도록 설정 -->
+<div class="tab-pane fade show active" id="member_management" th:fragment="memberManagementFragment">
+  <h3 class="mb-4">회원 관리</h3>
+  <div class="card">
+    <div class="card-body">
+      <!-- 성공/에러 메시지 표시 영역 -->
+      <div th:if="${managementSuccess}" class="alert alert-success alert-dismissible fade show" role="alert" th:text="${managementSuccess}">
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+      <div th:if="${managementError}" class="alert alert-danger alert-dismissible fade show" role="alert" th:text="${managementError}">
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+
+      <table class="table table-hover text-center align-middle">
+        <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>이메일(아이디)</th>
+          <th>이름</th>
+          <th>역할</th>
+          <th>가입일</th>
+          <th>관리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="member : ${members}">
+          <td th:text="${member.id}"></td>
+          <td th:text="${member.email}"></td>
+          <td th:text="${member.name}"></td>
+          <td>
+            <!-- 역할 변경 시 자동으로 폼을 제출 -->
+            <form th:if="${#authentication.principal.member.id != member.id}" method="post" th:action="@{/admin/members/{id}/update-role(id=${member.id})}" onchange="this.submit()">
+              <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+              <select class="form-select form-select-sm" name="role">
+                <option value="USER" th:selected="${member.role == 'USER'}">USER</option>
+                <option value="MANAGER" th:selected="${member.role == 'MANAGER'}">MANAGER</option>
+                <option value="ADMIN" th:selected="${member.role == 'ADMIN'}">ADMIN</option>
+              </select>
+            </form>
+            <!-- 자기 자신의 역할은 변경 불가 -->
+            <span th:if="${#authentication.principal.member.id == member.id}" th:text="${member.role}" class="badge bg-secondary"></span>
+          </td>
+          <td th:text="${#temporals.format(member.createdAt, 'yyyy-MM-dd')}"></td>
+          <td>
+            <!-- 강제탈퇴 버튼을 form으로 감싸서 제출 -->
+            <form th:if="${#authentication.principal.member.id != member.id}" method="post" th:action="@{/admin/members/{id}/delete(id=${member.id})}" onsubmit="return confirm('정말로 이 회원을 강제 탈퇴시키겠습니까?');">
+              <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+              <button type="submit" class="btn btn-sm btn-outline-danger">강제탈퇴</button>
+            </form>
+          </td>
+        </tr>
+        <tr th:if="${members.empty}">
+          <td colspan="6" class="py-5 text-muted">표시할 회원이 없습니다.</td>
+        </tr>
+        </tbody>
+      </table>
+
+      <!-- 페이지네이션 UI (htmx 적용됨, 수정 필요 없음) -->
+      <nav aria-label="Page navigation" th:if="${!members.empty and members.totalPages > 1}">
+        <ul class="pagination justify-content-center">
+          <!-- 첫 페이지 -->
+          <li class="page-item" th:classappend="${members.first} ? 'disabled'">
+            <a class="page-link" href="#"
+               th:hx-get="@{/admin(page=0, view='member_management')}"
+               hx-target="#member_management" hx-swap="outerHTML" hx-push-url="true">&laquo;&laquo;</a>
+          </li>
+          <!-- 이전 블록 -->
+          <li class="page-item" th:classappend="${startPage == 0} ? 'disabled'">
+            <a class="page-link" href="#"
+               th:hx-get="@{/admin(page=${startPage - 1}, view='member_management')}"
+               hx-target="#member_management" hx-swap="outerHTML" hx-push-url="true">&laquo;</a>
+          </li>
+          <!-- 페이지 번호 -->
+          <li class="page-item" th:each="pageNumber : ${#numbers.sequence(startPage, endPage)}" th:classappend="${pageNumber == members.number} ? 'active'">
+            <a class="page-link" href="#"
+               th:hx-get="@{/admin(page=${pageNumber}, view='member_management')}"
+               hx-target="#member_management" hx-swap="outerHTML" hx-push-url="true"
+               th:text="${pageNumber + 1}"></a>
+          </li>
+          <!-- 다음 블록 -->
+          <li class="page-item" th:classappend="${endPage >= members.totalPages - 1} ? 'disabled'">
+            <a class="page-link" href="#"
+               th:hx-get="@{/admin(page=${endPage + 1}, view='member_management')}"
+               hx-target="#member_management" hx-swap="outerHTML" hx-push-url="true">&raquo;</a>
+          </li>
+          <!-- 마지막 페이지 -->
+          <li class="page-item" th:classappend="${members.last} ? 'disabled'">
+            <a class="page-link" href="#"
+               th:hx-get="@{/admin(page=${members.totalPages - 1}, view='member_management')}"
+               hx-target="#member_management" hx-swap="outerHTML" hx-push-url="true">&raquo;&raquo;</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+</body>
+</html>
