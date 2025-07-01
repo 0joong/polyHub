@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="kr">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml" lang="kr">
 <head>
   <meta charset="UTF-8">
   <title>공지사항</title>
@@ -10,7 +10,7 @@
 <div class="container mt-5">
   <h2 class="mb-4">공지사항</h2>
 
-  <div class="mb-3 text-end">
+  <div class="mb-3 text-end" sec:authorize="hasRole('ADMIN')">
     <a href="/notice/write" class="btn btn-primary">새 글 작성</a>
   </div>
 

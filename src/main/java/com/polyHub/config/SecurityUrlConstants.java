@@ -19,6 +19,7 @@ public class SecurityUrlConstants {
             "/find-password",
             "/mypage/change-password",
             "/member/withdraw-success",
+            "/withdraw-success",
             "/api/chatbot-proxy",
             "/bookSearch",
             "/api/library/search"

@@ -93,22 +93,27 @@ public class FreeBoardServiceImpl implements FreeBoardService {
     @Override
     @Transactional
     public FreeBoardDetailDto findPostById(Long postId, Long memberId) {
-        FreeBoardPost post = postRepository.findById(postId).orElseThrow();
+        FreeBoardPost post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
         post.setViewCount(post.getViewCount() + 1);
 
         List<FreeBoardComment> allComments = commentRepository.findAllByPostIdOrderByCreatedAtAsc(postId);
 
         // 부모 ID를 기준으로 답글들을 그룹핑합니다.
         Map<Long, List<CommentDto>> replyMap = allComments.stream()
-                .filter(comment -> comment.getParentId() != null)
+                // [수정] getParent()를 사용하여 부모 댓글의 존재 여부를 확인합니다.
+                .filter(comment -> comment.getParent() != null)
                 .map(this::convertToCommentDto)
+                // [수정] CommentDto의 parentId를 기준으로 그룹핑합니다. (이 부분은 DTO를 사용하므로 기존 로직 유지)
                 .collect(Collectors.groupingBy(CommentDto::getParentId));
 
         // 원댓글만 필터링하여 최종적인 계층 구조를 만듭니다.
         List<CommentDto> commentDtos = allComments.stream()
-                .filter(comment -> comment.getParentId() == null)
+                // [수정] getParent()를 사용하여 최상위 댓글(부모가 없는)만 필터링합니다.
+                .filter(comment -> comment.getParent() == null)
                 .map(comment -> {
                     CommentDto parentDto = convertToCommentDto(comment);
+                    // DTO로 변환된 원댓글의 ID를 사용해 답글 목록을 찾아서 설정합니다.
                     parentDto.setReplies(replyMap.getOrDefault(comment.getId(), new ArrayList<>()));
                     return parentDto;
                 })
@@ -156,7 +161,8 @@ public class FreeBoardServiceImpl implements FreeBoardService {
                 .content(comment.getContent())
                 .writer(comment.getMember().getName())
                 .createdAt(comment.getCreatedAt())
-                .parentId(comment.getParentId()) // parentId 추가
+                //.parentId(comment.getParentId()) // parentId 추가
+                .parentId(comment.getParent() != null ? comment.getParent().getId() : null)
                 .build();
     }
 
@@ -174,18 +180,29 @@ public class FreeBoardServiceImpl implements FreeBoardService {
     }
 
     /**
-     * [추가] 댓글/답글 작성 로직
+     * [수정] 댓글/답글 작성 로직
      */
     @Override
     @Transactional
     public CommentDto writeComment(CommentWriteDto writeDto, Long memberId) {
-        Member writer = memberRepository.findById(memberId).orElseThrow();
-        FreeBoardPost post = postRepository.findById(writeDto.getPostId()).orElseThrow();
+        Member writer = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("작성자 정보를 찾을 수 없습니다."));
+        FreeBoardPost post = postRepository.findById(writeDto.getPostId())
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
+        FreeBoardComment parentComment = null;
+        // DTO에 parentId가 포함되어 있다면(즉, 답글이라면)
+        if (writeDto.getParentId() != null) {
+            // 부모 댓글 엔티티를 DB에서 조회합니다.
+            parentComment = commentRepository.findById(writeDto.getParentId())
+                    .orElseThrow(() -> new IllegalArgumentException("부모 댓글을 찾을 수 없습니다."));
+        }
+
+        // 엔티티를 생성합니다.
         FreeBoardComment comment = FreeBoardComment.builder()
                 .post(post)
                 .member(writer)
-                .parentId(writeDto.getParentId())
+                .parent(parentComment) // [수정] parentId(Long) 대신 parent(객체)를 설정합니다.
                 .content(writeDto.getContent())
                 .build();
 
@@ -212,7 +229,6 @@ public class FreeBoardServiceImpl implements FreeBoardService {
         // 제목과 내용 업데이트
         post.setTitle(updateDto.getTitle());
         post.setContent(updateDto.getContent());
-        // postRepository.save(post)는 @Transactional에 의해 자동으로 처리됨 (더티 체킹)
     }
 
     /**

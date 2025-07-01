@@ -6,6 +6,8 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "FREE_BOARD_COMMENT")
@@ -30,7 +32,7 @@ public class FreeBoardComment {
     private Member member; // 댓글 작성자
 
     // 부모 댓글 ID. 이 값이 null이면 일반 댓글, 값이 있으면 답글(대댓글).
-    private Long parentId;
+    // private Long parentId;
 
     @Column(nullable = false, length = 2000)
     private String content;
@@ -44,4 +46,12 @@ public class FreeBoardComment {
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
+
+    // [핵심 4] 부모 댓글이 삭제될 때, 자식 댓글(답글)도 함께 삭제합니다.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "PARENT_ID")
+    private FreeBoardComment parent;
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<FreeBoardComment> children = new ArrayList<>();
 }

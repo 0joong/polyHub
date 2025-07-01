@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
@@ -87,15 +88,20 @@ public class FaceRegisterController {
         SSLContext sslContext = SSLContext.getInstance("TLS");
         sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
 
+        // [추가] 호스트 이름 검증 비활성화를 위한 SSL 파라미터 설정
+        SSLParameters sslParams = new SSLParameters();
+        sslParams.setEndpointIdentificationAlgorithm(""); // 이 부분이 호스트 이름(IP 주소 포함) 검증을 끕니다.
+
         HttpClient client = HttpClient.newBuilder()
                 .sslContext(sslContext)
+                .sslParameters(sslParams) // [추가] 생성된 파라미터를 클라이언트에 적용
                 .build();
 
         // Multipart/form-data 요청 준비
         HttpRequest.BodyPublisher bodyPublisher = ofMimeMultipartData(filePath);
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://localhost:5000/api/extract-embedding"))
+                .uri(URI.create("https://172.31.57.21:5000/api/extract-embedding"))
                 .header("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW")
                 .POST(bodyPublisher)
                 .build();

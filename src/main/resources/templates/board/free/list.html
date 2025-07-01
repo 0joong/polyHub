@@ -49,11 +49,11 @@
         <thead class="table-light">
         <tr>
             <th style="width: 10%;">번호</th>
-            <th style="width: 50%;">제목</th>
+            <th style="width: 40%;">제목</th>
             <th style="width: 15%;">작성자</th>
             <th style="width: 15%;">작성일</th>
-            <th style="width: 5%;">조회</th>
-            <th style="width: 5%;">추천</th>
+            <th style="width: 10%;">조회</th>
+            <th style="width: 10%;">추천</th>
         </tr>
         </thead>
         <tbody>
@@ -77,10 +77,10 @@
     </table>
 
     <!-- 3. 하단 영역 (검색, 글쓰기, 페이지네이션) -->
-    <div class="d-flex justify-content-between my-4">
+    <div class="d-flex justify-content-between my-5">
         <form class="d-flex" role="search" th:action="@{/free}" method="get">
             <input class="form-control me-2" type="search" name="keyword" placeholder="검색어 입력" th:value="${param.keyword}">
-            <button class="btn btn-outline-primary" type="submit">검색</button>
+            <button class="btn btn-outline-primary text-nowrap" type="submit">검색</button>
         </form>
         <a th:href="@{/free/write}" class="btn btn-primary" sec:authorize="isAuthenticated()">
             <i class="bi bi-pencil-square me-2"></i>글쓰기

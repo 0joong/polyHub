@@ -22,4 +22,7 @@ public interface FreeBoardPostRepository extends JpaRepository<FreeBoardPost, Lo
      * @return 검색된 게시글 페이지
      */
     Page<FreeBoardPost> findByTitleContainingOrContentContaining(String titleKeyword, String contentKeyword, Pageable pageable);
+
+    // [추가] 특정 회원이 작성한 모든 게시글을 삭제하기 위한 메소드
+    void deleteAllByMemberId(Long memberId);
 }

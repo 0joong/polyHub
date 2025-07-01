@@ -93,7 +93,7 @@
           formData.append('file', blob, 'capture.jpg');
 
           // Flask 엔드포인트로 요청 보내기
-          fetch('https://polyhub.dev:5000/api/face-login', {
+          fetch('https://172.31.57.21:5000/api/face-login', {
               method: 'POST',
               body: formData,
               credentials: 'include' // 세션 쿠키 전달!

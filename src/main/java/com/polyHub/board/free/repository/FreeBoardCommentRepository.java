@@ -10,6 +10,9 @@ public interface FreeBoardCommentRepository extends JpaRepository<FreeBoardComme
     // 게시글 ID를 기준으로 모든 댓글을 작성일 순으로 조회
     List<FreeBoardComment> findAllByPostIdOrderByCreatedAtAsc(Long postId);
 
+    // [추가] 특정 회원이 작성한 모든 게시글을 삭제하기 위한 메소드
+    void deleteAllByMemberId(Long memberId);
+
     /**
      * [추가] 특정 시각 이후에 작성된 댓글 수를 조회합니다.
      */

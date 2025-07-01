@@ -4,13 +4,16 @@
     <meta charset="UTF-8">
     <title>PolyAISW HUB</title>
     <link rel="stylesheet" th:href="@{/css/lux.min.css}">
-    <!-- [추가] 챗봇 아이콘을 위한 Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- 실시간 메신저를 위한 SockJS & STOMP.js -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
     <style>
-        /* --- [추가] 챗봇 스타일 --- */
-        #chatbot-toggle {
+        /* --- 플로팅 버튼 공통 스타일 --- */
+        .floating-toggle {
             position: fixed;
-            bottom: 2rem;
             right: 2rem;
             width: 60px;
             height: 60px;
@@ -18,45 +21,62 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             transition: transform 0.2s ease-in-out;
             z-index: 1050;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
         }
-        #chatbot-toggle:hover {
+        .floating-toggle:hover {
             transform: scale(1.1);
         }
-        #chat-window {
+
+        /* --- 아이콘 위치 설정 --- */
+        #chatbot-toggle {
+            bottom: 2rem; /* 하단 챗봇 아이콘 */
+        }
+        #messenger-toggle {
+            bottom: 6.5rem; /* 챗봇 아이콘 위의 메신저 아이콘 */
+        }
+
+        /* --- 채팅창 공통 스타일 --- */
+        .chat-window {
             position: fixed;
-            bottom: 6.5rem;
+            bottom: 6.5rem; /* 모든 채팅창은 같은 위치에 열림 */
             right: 2rem;
             width: 350px;
             height: 500px;
             border-radius: 1rem;
             box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-            display: none; /* 기본적으로 숨김 */
+            display: none; /* 기본 숨김 */
             flex-direction: column;
             overflow: hidden;
             z-index: 1050;
+            background-color: white;
         }
-        #chat-messages {
+        .chat-messages {
             flex-grow: 1;
             overflow-y: auto;
             padding: 1rem;
         }
+
+        /* --- AI 챗봇 메시지 스타일 --- */
         .chat-message {
-            margin-bottom: 0.75rem;
-            padding: 0.5rem 1rem;
-            border-radius: 1rem;
-            max-width: 80%;
+            margin-bottom: 0.75rem; padding: 0.5rem 1rem; border-radius: 1rem; max-width: 80%;
         }
         .user-message {
-            background-color: #0d6efd;
-            color: white;
-            align-self: flex-end;
-            border-bottom-right-radius: 0;
+            background-color: #0d6efd; color: white; align-self: flex-end; border-bottom-right-radius: 0;
         }
         .bot-message {
-            background-color: #e9ecef;
-            color: #212529;
-            align-self: flex-start;
-            border-bottom-left-radius: 0;
+            background-color: #e9ecef; color: #212529; align-self: flex-start; border-bottom-left-radius: 0;
+        }
+
+        /* --- 실시간 메신저 메시지 스타일 --- */
+        #messenger-messages {
+            background-color: #f8f9fa;
+        }
+        .messenger-message {
+            margin-bottom: 0.5rem; padding: 0.5rem 1rem; border-radius: 1rem; max-width: 90%; line-break: anywhere;
+            background-color: #e9ecef; color: #212529; align-self: flex-start;
         }
     </style>
 </head>
@@ -66,31 +86,25 @@
 <div th:replace="layout/header :: header"></div>
 
 <main class="container mt-5">
+    <!-- 메인 콘텐츠 (기존과 동일) -->
     <div class="row">
-        <!-- 메인 콘텐츠 -->
         <div class="col-md-6">
             <h1 class="mb-4">환영합니다</h1>
             <p class="lead">한국폴리텍대학 성남캠퍼스 AISW과 홈페이지입니다.</p>
             <div class="d-grid gap-3 col-6 mx-auto mt-4">
                 <a class="btn btn-lg btn-success" th:href="@{/notice}">공지사항 바로가기</a>
-                <a class="btn btn-lg btn-primary fw-bold" th:href="@{/chat}">학과 메신저</a>
+                <!--<a class="btn btn-lg btn-primary fw-bold disabled" href="#">학과 메신저/챗봇 열기</a>-->
             </div>
         </div>
-
-        <!-- [수정] 식단표 UI 개선 -->
         <aside class="col-md-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-header text-center bg-primary text-white d-flex align-items-center justify-content-center">
-                    <i class="bi bi-egg-fried fs-4 me-2"></i>
-                    <h5 class="mb-0">주간 식단표</h5>
+                    <i class="bi bi-egg-fried fs-4 me-2"></i><h5 class="mb-0">주간 식단표</h5>
                 </div>
                 <div class="card-body p-4">
                     <div th:if="${menu != null and not #strings.isEmpty(menu)}" style="white-space: pre-line; font-size: 0.95rem; line-height: 1.7;">
-                        <!-- th:utext를 사용하여 서버에서 받은 문자열의 줄바꿈(\n)을 HTML의 <br> 태그로 변환하여 보여줍니다. -->
-                        <p class="card-text" th:utext="${menu}">
-                        </p>
+                        <p class="card-text" th:utext="${menu}"></p>
                     </div>
-                    <!-- menu 변수가 없거나 비어있을 때 표시될 메시지 -->
                     <div th:if="${menu == null or #strings.isEmpty(menu)}" class="text-center text-muted d-flex flex-column justify-content-center h-100">
                         <p class="mb-0">오늘은 식단 정보가 없습니다.</p>
                     </div>
@@ -105,30 +119,123 @@
 
 <div th:replace="layout/footer :: footer"></div>
 
-<!-- 챗봇 UI -->
-<button id="chatbot-toggle" class="btn btn-primary d-flex align-items-center justify-content-center fs-3">
-    <i class="bi bi-robot"></i>
-</button>
-
-<div id="chat-window" class="card">
-    <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
-        <h5 class="mb-0">학과 챗봇</h5>
-        <button id="close-chat" type="button" class="btn-close btn-close-white"></button>
-    </div>
-    <div id="chat-messages" class="card-body d-flex flex-column">
-        <div class="chat-message bot-message">
-            안녕하세요! 학과 생활에 대해 궁금한 점을 물어보세요.
+<!-- =============================================================== -->
+<!-- [수정] 로그인한 사용자에게만 채팅/메신저 UI 및 스크립트가 보이도록 설정 -->
+<!-- =============================================================== -->
+<th:block th:if="${#authorization.expression('isAuthenticated()')}">
+    <!-- 실시간 학과 메신저 UI -->
+    <button id="messenger-toggle" class="floating-toggle btn btn-success">
+        <i class="bi bi-chat-dots-fill"></i>
+    </button>
+    <div id="messenger-window" class="chat-window card">
+        <div class="card-header d-flex justify-content-between align-items-center bg-success text-white">
+            <h5 class="mb-0">학과 메신저</h5>
+            <button id="close-messenger" type="button" class="btn-close btn-close-white"></button>
+        </div>
+        <div id="messenger-messages" class="chat-messages d-flex flex-column"></div>
+        <div class="card-footer p-2">
+            <form id="messenger-form" class="d-flex">
+                <input type="text" id="messenger-input" class="form-control" placeholder="메시지 입력..." autocomplete="off">
+                <button type="submit" class="btn btn-success ms-2"><i class="bi bi-send-fill"></i></button>
+            </form>
         </div>
     </div>
-    <div class="card-footer p-2">
-        <form id="chat-form" class="d-flex">
-            <input type="text" id="chat-input" class="form-control" placeholder="메시지 입력..." autocomplete="off">
-            <button type="submit" class="btn btn-primary ms-2"><i class="bi bi-send-fill"></i></button>
-        </form>
+
+    <!-- AI 챗봇 UI -->
+    <button id="chatbot-toggle" class="floating-toggle btn btn-primary">
+        <i class="bi bi-robot"></i>
+    </button>
+    <div id="chat-window" class="chat-window card">
+        <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+            <h5 class="mb-0">학과 챗봇</h5>
+            <button id="close-chat" type="button" class="btn-close btn-close-white"></button>
+        </div>
+        <div id="chat-messages" class="chat-messages d-flex flex-column">
+            <div class="chat-message bot-message">안녕하세요! 학과 생활에 대해 궁금한 점을 물어보세요.</div>
+        </div>
+        <div class="card-footer p-2">
+            <form id="chat-form" class="d-flex">
+                <input type="text" id="chat-input" class="form-control" placeholder="메시지 입력..." autocomplete="off">
+                <button type="submit" class="btn btn-primary ms-2"><i class="bi bi-send-fill"></i></button>
+            </form>
+        </div>
     </div>
-</div>
+</th:block>
+
 </body>
 <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+
+<!-- =============================================================== -->
+<!--  실시간 학과 메신저 스크립트                               -->
+<!-- =============================================================== -->
+<script>
+    { // 스크립트 스코프 격리를 위한 블록
+        const messengerToggle = document.getElementById('messenger-toggle');
+        const messengerWindow = document.getElementById('messenger-window');
+        const closeMessengerBtn = document.getElementById('close-messenger');
+        const messengerForm = document.getElementById('messenger-form');
+        const messengerInput = document.getElementById('messenger-input');
+        const messagesContainer = document.getElementById('messenger-messages');
+        let stompClient = null;
+
+        messengerToggle.addEventListener('click', () => {
+            const isHidden = messengerWindow.style.display === 'none' || messengerWindow.style.display === '';
+            messengerWindow.style.display = isHidden ? 'flex' : 'none';
+            if (isHidden) document.getElementById('chat-window').style.display = 'none'; // 다른 창 닫기
+            if (isHidden && (!stompClient || !stompClient.connected)) connect();
+        });
+
+        closeMessengerBtn.addEventListener('click', () => {
+            messengerWindow.style.display = 'none';
+            if (stompClient && stompClient.connected) {
+                stompClient.disconnect(() => { console.log('Messenger disconnected'); });
+            }
+        });
+
+        function connect() {
+            addSystemMessage('채팅방에 연결 중입니다...');
+            const socket = new SockJS('/ws-chat');
+            stompClient = Stomp.over(socket);
+            stompClient.debug = null; // 콘솔 로그 끄기
+            stompClient.connect({}, (frame) => {
+                addSystemMessage('채팅방에 연결되었습니다.');
+                stompClient.subscribe('/room/room1', (messageOutput) => {
+                    showMessage(JSON.parse(messageOutput.body));
+                });
+            }, (error) => {
+                addSystemMessage('연결에 실패했습니다.');
+            });
+        }
+
+        messengerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const messageContent = messengerInput.value.trim();
+            if (messageContent && stompClient && stompClient.connected) {
+                stompClient.send("/app/chat.sendMessage", {}, JSON.stringify({ content: messageContent, roomId: 'room1' }));
+                messengerInput.value = '';
+            }
+        });
+
+        function showMessage(message) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'messenger-message';
+            msgDiv.textContent = `${message.sender}: ${message.content}`;
+            messagesContainer.appendChild(msgDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function addSystemMessage(text) {
+            const sysMsgDiv = document.createElement('div');
+            Object.assign(sysMsgDiv.style, { textAlign: 'center', color: 'gray', fontSize: '0.8rem', margin: '10px 0' });
+            sysMsgDiv.textContent = text;
+            messagesContainer.appendChild(sysMsgDiv);
+        }
+    }
+</script>
+
+<!-- =============================================================== -->
+<!--  AI 챗봇 스크립트                                          -->
+<!-- =============================================================== -->
 <script>
     const chatbotToggle = document.getElementById('chatbot-toggle');
     const chatWindow = document.getElementById('chat-window');

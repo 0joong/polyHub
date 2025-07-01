@@ -30,9 +30,8 @@ public class ChatbotProxyController {
     private final RagService ragService;
     private final String menuUrl;
     private final String noticeUrl;
-    private final ObjectMapper objectMapper; // [추가] JSON 변환을 위한 ObjectMapper
+    private final ObjectMapper objectMapper;
 
-    // [수정] 생성자에 ObjectMapper 추가
     public ChatbotProxyController(
             ChatbotService chatbotService,
             CrawlingService crawlingService,
@@ -55,14 +54,15 @@ public class ChatbotProxyController {
             // 1. 마지막 사용자 메시지를 가져옵니다.
             String userQuery = requestDto.getMessages().getLast().get("content");
 
-            // 2. RAG 서비스를 사용하여 관련 공지사항을 검색합니다.
+            // 2. RAG 서비스를 사용하여 관련 정보를 검색합니다.
             String relevantNotice = ragService.findRelevantNotice(userQuery);
+            String relevantSchedule = ragService.findRelevantSchedule(userQuery); // [추가] 관련 일정 검색
 
             // 3. 식단표, 날짜 등 다른 정보도 가져옵니다.
             String todayMenu = crawlingService.getTodayMenu();
             String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일"));
 
-            // 4. 검색된 모든 정보를 종합하여 최종 시스템 프롬프트를 만듭니다.
+            // 4. 검색된 모든 정보를 종합하여 최종 시스템 프롬프트를 만듭니다. [수정]
             String systemContent = String.format(
                     "You are a helpful AI assistant named '폴리봇'. Your role is to assist students of the PolyAISW department." +
                             "Always answer in friendly Korean. Do not use markdown." +
@@ -71,11 +71,13 @@ public class ChatbotProxyController {
                             "Today's Date: %s\n" +
                             "Today's Menu: %s\n" +
                             "Relevant Announcement: %s\n" +
+                            "Relevant Schedule: %s\n" + // [추가] 일정 정보 프롬프트
                             "General Announcements URL: %s\n" +
                             "--------------",
                     currentDate,
                     todayMenu.isEmpty() ? "정보 없음" : todayMenu,
                     relevantNotice.isEmpty() ? "관련 정보 없음" : relevantNotice,
+                    relevantSchedule.isEmpty() ? "관련 정보 없음" : relevantSchedule, // [추가] 일정 정보
                     noticeUrl
             );
 

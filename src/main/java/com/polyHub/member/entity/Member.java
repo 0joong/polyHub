@@ -1,5 +1,7 @@
 package com.polyHub.member.entity;
 
+import com.polyHub.board.free.entity.FreeBoardComment;
+import com.polyHub.board.free.entity.FreeBoardPost;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -41,6 +43,14 @@ public class Member implements UserDetails {
 
     // DB의 role 컬럼과 매핑될 필드
     private String role;
+
+    // [핵심 1] 회원이 삭제될 때, 이 회원이 쓴 "게시글"도 함께 삭제합니다.
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<FreeBoardPost> freeBoardPosts = new ArrayList<>();
+
+    // [핵심 2] 댓글은 게시글을 통해 삭제되므로, 여기서는 직접적인 Cascade를 설정하지 않습니다.
+    @OneToMany(mappedBy = "member")
+    private List<FreeBoardComment> freeBoardComments = new ArrayList<>();
 
     /**
      * 사용자의 역할(role)에 따라 동적으로 권한 목록을 생성하여 반환합니다.

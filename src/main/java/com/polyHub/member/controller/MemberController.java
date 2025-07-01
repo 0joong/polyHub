@@ -191,7 +191,6 @@ public class MemberController {
     ) {
         try {
             memberService.withdraw(userDetails.getMember().getEmail(), password);
-            // 탈퇴 성공 시, 현재 세션을 무효화(로그아웃)하고 로그인 페이지로 이동
             SecurityContextHolder.clearContext();
             request.getSession().invalidate();
 

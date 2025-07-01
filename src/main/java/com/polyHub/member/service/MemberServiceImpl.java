@@ -1,5 +1,7 @@
 package com.polyHub.member.service;
 
+import com.polyHub.board.free.repository.FreeBoardCommentRepository;
+import com.polyHub.board.free.repository.FreeBoardPostRepository;
 import com.polyHub.member.dto.PasswordChangeDto;
 import com.polyHub.member.entity.Member;
 import com.polyHub.member.repository.MemberRepository;
@@ -18,6 +20,8 @@ import java.util.UUID;
 public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
+    private final FreeBoardPostRepository postRepository; // [추가] 게시글 리포지토리
+    private final FreeBoardCommentRepository commentRepository; // [추가] 댓글 리포지토리
     private final PasswordEncoder passwordEncoder;
     private final JavaMailSender mailSender;
 
@@ -111,21 +115,29 @@ public class MemberServiceImpl implements MemberService {
     }
 
     /**
-     * [추가] 회원 탈퇴 로직
+     * [최종 수정] 회원 탈퇴 로직
      */
     @Override
     @Transactional
     public void withdraw(String email, String password) {
+        // 1. 사용자 정보를 조회합니다.
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        // 1. 비밀번호 확인
+        // 2. 비밀번호를 확인합니다.
         if (!passwordEncoder.matches(password, member.getPassword())) {
             throw new IllegalArgumentException("비밀번호가 올바르지 않습니다.");
         }
 
-        // 2. DB에서 회원 정보 삭제
-        // TODO: 회원이 작성한 게시글, 댓글 등 다른 데이터도 함께 처리하는 로직 추가 필요
+        // 3. 이 회원이 작성한 "게시글"과 연관된 "댓글"을 먼저 삭제합니다.
+        // FreeBoardPost 엔티티에 cascade 설정이 되어 있으므로, 게시글만 삭제해도 관련 댓글은 모두 삭제됩니다.
+        postRepository.deleteAllByMemberId(member.getId());
+
+        // 4. 혹시 모를 다른 게시판의 댓글 등, 회원을 직접 참조하는 모든 댓글을 삭제합니다.
+        // (현재는 자유게시판 댓글만 있으므로 아래 코드를 추가합니다.)
+        commentRepository.deleteAllByMemberId(member.getId());
+
+        // 5. 모든 자식 데이터가 정리되었으므로, 마지막으로 회원 정보를 삭제합니다.
         memberRepository.delete(member);
     }
 
